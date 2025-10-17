@@ -2,7 +2,6 @@
 
 local accountDB
 local characterDB
-local isSyncing = false
 
 local function createItemKeyHash(itemKey)
 	local keys, values = {}, {}
@@ -10,11 +9,6 @@ local function createItemKeyHash(itemKey)
 	table.sort(keys)
 	for _, k in ipairs(keys) do table.insert(values, itemKey[k]) end
 	return table.concat(values, "-")
-end
-
-local function getItemNameFromKey(itemKey)
-	local itemName = C_Item.GetItemNameByID(itemKey.itemID)
-	return itemName or ("Item " .. itemKey.itemID)
 end
 
 local function syncFavorite(itemKey)
@@ -28,15 +22,14 @@ local function syncFavorite(itemKey)
 	return true
 end
 
-local function saveFavoriteChange(itemKey, isFavorited)
-	if isSyncing then return end
-	
+local function saveFavorite(itemKey, isFavorited)
 	local itemHash = createItemKeyHash(itemKey)
+
 	accountDB.favorites[itemHash] = isFavorited and itemKey or nil
 	characterDB.favorites[itemHash] = isFavorited and itemKey or nil
 end
 
-hooksecurefunc(C_AuctionHouse, "SetFavoriteItem", saveFavoriteChange)
+hooksecurefunc(C_AuctionHouse, "SetFavoriteItem", saveFavorite)
 
 local eventFrame = CreateFrame("Frame")
 
@@ -67,47 +60,18 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	end
 
 	if event == "AUCTION_HOUSE_SHOW" then
-		isSyncing = true
-
 		local needRefresh = false
-		local addedItemNames = {}
-		local removedItemNames = {}
 
 		if characterDB.synced then
-			for itemHash, itemKey in pairs(accountDB.favorites) do
-				if not characterDB.favorites[itemHash] then
-					C_AuctionHouse.SetFavoriteItem(itemKey, true)
-					table.insert(addedItemNames, getItemNameFromKey(itemKey))
-					needRefresh = true
-				end
-			end
-
-			for itemHash, itemKey in pairs(characterDB.favorites) do
-				if not accountDB.favorites[itemHash] then
-					C_AuctionHouse.SetFavoriteItem(itemKey, false)
-					table.insert(removedItemNames, getItemNameFromKey(itemKey))
-					needRefresh = true
+			for _, favorites in ipairs { accountDB.favorites, characterDB.favorites } do
+				for _, itemKey in pairs(favorites) do
+					needRefresh = syncFavorite(itemKey) or needRefresh
 				end
 			end
 		else
 			for _, itemKey in pairs(accountDB.favorites) do
 				C_AuctionHouse.SetFavoriteItem(itemKey, true)
-				table.insert(addedItemNames, getItemNameFromKey(itemKey))
 				needRefresh = true
-			end
-		end
-
-		isSyncing = false
-
-		if #addedItemNames > 0 then
-			for _, itemName in ipairs(addedItemNames) do
-				print(itemName .. " added to favorites")
-			end
-		end
-
-		if #removedItemNames > 0 then
-			for _, itemName in ipairs(removedItemNames) do
-				print(itemName .. " removed from favorites")
 			end
 		end
 
@@ -122,7 +86,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 	end
 
 	local function processItemKey(itemKey)
-		saveFavoriteChange(itemKey, C_AuctionHouse.IsFavoriteItem(itemKey))
+		saveFavorite(itemKey, C_AuctionHouse.IsFavoriteItem(itemKey))
 	end
 
 	if event == "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" then

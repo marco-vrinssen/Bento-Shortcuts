@@ -9,8 +9,8 @@ local checkStartTime = 0
 local INVITE_PATTERN = "You have invited (.+) to join"
 
 local function whisperPlayer(playerName)
-    if BentoShortcutsDB.autoWhisperEnabled and playerName and BentoShortcutsDB.whisperMessage ~= "" then
-        SendChatMessage(BentoShortcutsDB.whisperMessage, "WHISPER", nil, playerName)
+    if BentoInviteWhisperDB.autoWhisperEnabled and playerName and BentoInviteWhisperDB.whisperMessage ~= "" then
+        SendChatMessage(BentoInviteWhisperDB.whisperMessage, "WHISPER", nil, playerName)
         print("Bento Shortcuts: Whispered " .. playerName)
     end
 end
@@ -66,8 +66,8 @@ local function createSettingsPopup()
     local originalMessage, originalEnabled
     
     local function initControls()
-        originalMessage = BentoShortcutsDB.whisperMessage
-        originalEnabled = BentoShortcutsDB.autoWhisperEnabled
+        originalMessage = BentoInviteWhisperDB.whisperMessage
+        originalEnabled = BentoInviteWhisperDB.autoWhisperEnabled
         input:SetText(originalMessage)
         checkbox:SetChecked(originalEnabled)
     end
@@ -79,10 +79,10 @@ local function createSettingsPopup()
     end)
     
     saveButton:SetScript("OnClick", function()
-        BentoShortcutsDB.whisperMessage = input:GetText()
-        BentoShortcutsDB.autoWhisperEnabled = checkbox:GetChecked()
-        originalMessage = BentoShortcutsDB.whisperMessage
-        originalEnabled = BentoShortcutsDB.autoWhisperEnabled
+        BentoInviteWhisperDB.whisperMessage = input:GetText()
+        BentoInviteWhisperDB.autoWhisperEnabled = checkbox:GetChecked()
+        originalMessage = BentoInviteWhisperDB.whisperMessage
+        originalEnabled = BentoInviteWhisperDB.autoWhisperEnabled
         print("Bento Shortcuts: Settings saved")
         popup:Hide()
     end)
@@ -114,8 +114,8 @@ local function createSettingsButton()
     end
     
     local button = CreateFrame("Button", nil, CommunitiesFrame.CommunitiesControlFrame, "GameMenuButtonTemplate")
-    button:SetSize(100, 20)
-    button:SetText("Whisper Settings")
+    button:SetSize(104, 20)
+    button:SetText("Invite Settings")
     button:GetFontString():SetTextColor(1, 0.82, 0)
     button:SetPoint("BOTTOMLEFT", CommunitiesFrame, "BOTTOMLEFT", 8, 4)
     
@@ -161,10 +161,9 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" then
         local addon = ...
         if addon == "Bento-Shortcuts" then
-            BentoShortcutsDB = BentoShortcutsDB or {}
-            BentoShortcutsDB.whisperMessage = BentoShortcutsDB.whisperMessage or "Welcome to our community! Feel free to ask questions."
-            BentoShortcutsDB.autoWhisperEnabled = BentoShortcutsDB.autoWhisperEnabled ~= false
-            print("Bento Shortcuts: Type /bs for commands")
+            BentoInviteWhisperDB = BentoInviteWhisperDB or {}
+            BentoInviteWhisperDB.whisperMessage = BentoInviteWhisperDB.whisperMessage or "Welcome to our community! Feel free to ask questions."
+            BentoInviteWhisperDB.autoWhisperEnabled = BentoInviteWhisperDB.autoWhisperEnabled ~= false
         end
     elseif event == "CHAT_MSG_SYSTEM" then
         local message = ...
@@ -202,41 +201,3 @@ eventFrame:SetScript("OnUpdate", function()
         checkPopup()
     end
 end)
-
-SLASH_BENTOSHORTCUTS1 = "/bs"
-SLASH_BENTOSHORTCUTS2 = "/bentoshortcuts"
-SlashCmdList["BENTOSHORTCUTS"] = function(msg)
-    local command = msg:lower():trim()
-    
-    if command == "" or command == "help" then
-        print("Bento Shortcuts commands:")
-        print("/bs toggle - Enable/disable auto-whisper")
-        print("/bs message <text> - Set whisper message")
-        print("/bs show - Show current settings")
-        print("/bs config - Open settings window")
-    elseif command == "toggle" then
-        BentoShortcutsDB.autoWhisperEnabled = not BentoShortcutsDB.autoWhisperEnabled
-        local status = BentoShortcutsDB.autoWhisperEnabled and "enabled" or "disabled"
-        print("Bento Shortcuts: Auto-whisper " .. status)
-    elseif command:match("^message ") then
-        local message = msg:match("^message (.+)")
-        if message then
-            BentoShortcutsDB.whisperMessage = message
-            print("Bento Shortcuts: Message updated")
-        else
-            print("Bento Shortcuts: Usage /bs message <text>")
-        end
-    elseif command == "show" then
-        print("Bento Shortcuts settings:")
-        print("Auto-whisper: " .. (BentoShortcutsDB.autoWhisperEnabled and "enabled" or "disabled"))
-        print("Message: " .. (BentoShortcutsDB.whisperMessage or "none"))
-    elseif command == "config" then
-        if CommunitiesFrame and CommunitiesFrame:IsShown() then
-            showSettings()
-        else
-            print("Bento Shortcuts: Open Communities frame first")
-        end
-    else
-        print("Bento Shortcuts: Unknown command, type /bs help for commands")
-    end
-end

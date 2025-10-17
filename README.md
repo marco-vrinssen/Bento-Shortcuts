@@ -4,17 +4,10 @@ Quality of life utilities and automation features for World of Warcraft that str
 
 ## Features
 
-- **Auction Filter** - Automatically filters auction house to current expansion
+- **Auction Expansion Filter** - Automatically filters auction house to current expansion
+- **Auction Favorites Sync** - Syncs auction house favorites across all characters
 - **Auto Ghost** - Automatically releases spirit in PvP zones
-- **Invite Whisper** - Auto-whispers welcome messages to community invites
+- **Invite Whisper** - Auto-whispers welcome messages to community invites (configure via "Invite Settings" button in Communities frame)
 - **Name Copy** - Adds "Copy Full Name" option to player context menus
 - **Reload Button** - Right-click main menu button to reload UI
 - **Sell & Repair** - Auto-sells junk and repairs when visiting merchants
-
-## Commands
-
-Type `/biw` or `/bentoinvitewhisper` for invite whisper commands:
-- `/biw toggle` - Enable/disable auto-whisper
-- `/biw message <text>` - Set whisper message
-- `/biw show` - Show current settings
-- `/biw config` - Open settings window
