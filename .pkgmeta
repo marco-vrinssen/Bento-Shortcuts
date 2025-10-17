@@ -1,0 +1,8 @@
+package-as: Bento-Shortcuts
+
+ignore:
+  - README.md
+  - .gitignore
+  - .git
+  - .github
+  - .pkgmeta

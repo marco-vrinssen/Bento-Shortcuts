@@ -1,0 +1,13 @@
+## Interface: 110200
+## Title: Bento Shortcuts
+## Notes: Quality of life utilities and automation for streamlined gameplay
+## Author: MIYANKO
+## Version: 1.0.0
+## SavedVariables: BentoShortcutsDB
+
+Modules/Auction.lua
+Modules/AutoGhost.lua
+Modules/InviteWhisper.lua
+Modules/NameCopy.lua
+Modules/ReloadButton.lua
+Modules/SellRepair.lua
