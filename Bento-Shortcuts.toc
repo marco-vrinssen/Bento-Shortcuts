@@ -3,9 +3,10 @@
 ## Notes: Quality of life utilities and automation for streamlined gameplay
 ## Author: MIYANKO
 ## Version: 1.0.0
-## SavedVariables: BentoShortcutsDB
+## SavedVariables: BentoAuctionFavoritesDB
 
-Modules/Auction.lua
+Modules/AuctionExpacFilter.lua
+Modules/AuctionFavoriteSync.lua
 Modules/AutoGhost.lua
 Modules/InviteWhisper.lua
 Modules/NameCopy.lua
