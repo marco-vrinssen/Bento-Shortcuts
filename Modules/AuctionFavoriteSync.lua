@@ -1,7 +1,7 @@
 -- Syncs auction house favorites across all characters on the account
 
-local favoritesDB
-local characterFavorites = {}
+local accountDB
+local characterDB
 local isSyncing = false
 
 local function createItemKeyHash(itemKey)
@@ -17,12 +17,23 @@ local function getItemNameFromKey(itemKey)
 	return itemName or ("Item " .. itemKey.itemID)
 end
 
+local function syncFavorite(itemKey)
+	local itemHash = createItemKeyHash(itemKey)
+
+	if not accountDB.favorites[itemHash] == not characterDB.favorites[itemHash] then
+		return false
+	end
+
+	C_AuctionHouse.SetFavoriteItem(itemKey, accountDB.favorites[itemHash] ~= nil)
+	return true
+end
+
 local function saveFavoriteChange(itemKey, isFavorited)
 	if isSyncing then return end
 	
 	local itemHash = createItemKeyHash(itemKey)
-	favoritesDB.favorites[itemHash] = isFavorited and itemKey or nil
-	characterFavorites[itemHash] = isFavorited
+	accountDB.favorites[itemHash] = isFavorited and itemKey or nil
+	characterDB.favorites[itemHash] = isFavorited and itemKey or nil
 end
 
 hooksecurefunc(C_AuctionHouse, "SetFavoriteItem", saveFavoriteChange)
@@ -31,37 +42,58 @@ local eventFrame = CreateFrame("Frame")
 
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("AUCTION_HOUSE_SHOW")
+eventFrame:RegisterEvent("AUCTION_HOUSE_CLOSED")
 
 eventFrame:SetScript("OnEvent", function(_, event, ...)
 	if event == "ADDON_LOADED" and ... == "Bento-Shortcuts" then
 		eventFrame:UnregisterEvent("ADDON_LOADED")
 
 		BentoAuctionFavoritesDB = BentoAuctionFavoritesDB or {}
-		favoritesDB = BentoAuctionFavoritesDB
-		favoritesDB.favorites = favoritesDB.favorites or {}
+		accountDB = BentoAuctionFavoritesDB
+		accountDB.favorites = accountDB.favorites or {}
+
+		BentoAuctionFavoritesCharDB = BentoAuctionFavoritesCharDB or {}
+		characterDB = BentoAuctionFavoritesCharDB
+		characterDB.favorites = characterDB.favorites or {}
+
+		if not characterDB.synced then
+			eventFrame:RegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED")
+			eventFrame:RegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_ADDED")
+			eventFrame:RegisterEvent("COMMODITY_SEARCH_RESULTS_UPDATED")
+			eventFrame:RegisterEvent("COMMODITY_SEARCH_RESULTS_ADDED")
+			eventFrame:RegisterEvent("ITEM_SEARCH_RESULTS_UPDATED")
+			eventFrame:RegisterEvent("ITEM_SEARCH_RESULTS_ADDED")
+		end
 	end
 
 	if event == "AUCTION_HOUSE_SHOW" then
 		isSyncing = true
 
+		local needRefresh = false
 		local addedItemNames = {}
 		local removedItemNames = {}
 
-		for itemHash, itemKey in pairs(favoritesDB.favorites) do
-			if not characterFavorites[itemHash] then
+		if characterDB.synced then
+			for itemHash, itemKey in pairs(accountDB.favorites) do
+				if not characterDB.favorites[itemHash] then
+					C_AuctionHouse.SetFavoriteItem(itemKey, true)
+					table.insert(addedItemNames, getItemNameFromKey(itemKey))
+					needRefresh = true
+				end
+			end
+
+			for itemHash, itemKey in pairs(characterDB.favorites) do
+				if not accountDB.favorites[itemHash] then
+					C_AuctionHouse.SetFavoriteItem(itemKey, false)
+					table.insert(removedItemNames, getItemNameFromKey(itemKey))
+					needRefresh = true
+				end
+			end
+		else
+			for _, itemKey in pairs(accountDB.favorites) do
 				C_AuctionHouse.SetFavoriteItem(itemKey, true)
 				table.insert(addedItemNames, getItemNameFromKey(itemKey))
-			end
-			characterFavorites[itemHash] = true
-		end
-
-		for itemHash in pairs(characterFavorites) do
-			if not favoritesDB.favorites[itemHash] then
-				local itemKey = favoritesDB.favorites[itemHash]
-				if itemKey then
-					table.insert(removedItemNames, getItemNameFromKey(itemKey))
-				end
-				characterFavorites[itemHash] = nil
+				needRefresh = true
 			end
 		end
 
@@ -79,7 +111,37 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 			end
 		end
 
-		C_AuctionHouse.SearchForFavorites({})
+		if needRefresh then
+			C_AuctionHouse.SearchForFavorites({})
+		end
 	end
 
+	if event == "AUCTION_HOUSE_CLOSED" then
+		characterDB.synced = true
+		eventFrame:UnregisterAllEvents()
+	end
+
+	local function processItemKey(itemKey)
+		saveFavoriteChange(itemKey, C_AuctionHouse.IsFavoriteItem(itemKey))
+	end
+
+	if event == "AUCTION_HOUSE_BROWSE_RESULTS_UPDATED" then
+		for _, result in ipairs(C_AuctionHouse.GetBrowseResults()) do
+			processItemKey(result.itemKey)
+		end
+	end
+
+	if event == "AUCTION_HOUSE_BROWSE_RESULTS_ADDED" then
+		for _, result in ipairs(...) do
+			processItemKey(result.itemKey)
+		end
+	end
+
+	if event == "COMMODITY_SEARCH_RESULTS_UPDATED" or event == "COMMODITY_SEARCH_RESULTS_ADDED" then
+		processItemKey(C_AuctionHouse.MakeItemKey(...))
+	end
+
+	if event == "ITEM_SEARCH_RESULTS_UPDATED" or event == "ITEM_SEARCH_RESULTS_ADDED" then
+		processItemKey(...)
+	end
 end)

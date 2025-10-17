@@ -4,6 +4,7 @@
 ## Author: MIYANKO
 ## Version: 1.0.0
 ## SavedVariables: BentoAuctionFavoritesDB
+## SavedVariablesPerCharacter: BentoAuctionFavoritesCharDB
 
 Modules/AuctionExpacFilter.lua
 Modules/AuctionFavoriteSync.lua
