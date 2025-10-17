@@ -13,17 +13,8 @@ Quality of life utilities and automation features for World of Warcraft that str
 
 ## Commands
 
-Type `/bs` or `/bentoshortcuts` for invite whisper commands:
-- `/bs toggle` - Enable/disable auto-whisper
-- `/bs message <text>` - Set whisper message
-- `/bs show` - Show current settings
-- `/bs config` - Open settings window
-
-## Installation
-
-Install via your preferred addon manager (Wago, CurseForge) or download manually.
-
-## Compatibility
-
-- World of Warcraft: Retail (11.0.2+)
-- Lightweight and efficient design
+Type `/biw` or `/bentoinvitewhisper` for invite whisper commands:
+- `/biw toggle` - Enable/disable auto-whisper
+- `/biw message <text>` - Set whisper message
+- `/biw show` - Show current settings
+- `/biw config` - Open settings window
