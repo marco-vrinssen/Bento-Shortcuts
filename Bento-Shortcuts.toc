@@ -2,7 +2,7 @@
 ## Title: Bento Shortcuts
 ## Notes: Quality of life utilities and automation for streamlined gameplay
 ## Author: MIYANKO
-## Version: 1.1.1
+## Version: 1.2.0
 ## SavedVariables: BentoAuctionFavoritesDB, BentoInviteWhisperDB
 ## SavedVariablesPerCharacter: BentoAuctionFavoritesCharDB
 
@@ -12,6 +12,7 @@ Modules/AutoGhost.lua
 Modules/FullNameCopy.lua
 Modules/InstantAutoLoot.lua
 Modules/InviteWhisper.lua
+Modules/PostItem.lua
 Modules/ReloadButton.lua
 Modules/ScoreboardNameCopy.lua
 Modules/SellRepair.lua
