@@ -26,8 +26,8 @@ local function showPlayerNamesDialog(playerNames)
   dialog:RegisterForDrag("LeftButton")
   dialog:SetScript("OnDragStart", dialog.StartMoving)
   dialog:SetScript("OnDragStop", dialog.StopMovingOrSizing)
-  dialog:SetFrameStrata("DIALOG")
-  dialog:SetFrameLevel(100)
+  dialog:SetFrameStrata("FULLSCREEN_DIALOG")
+  dialog:SetFrameLevel(1000)
 
   dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   dialog.title:SetPoint("TOP", dialog.TitleBg, "TOP", 0, -5)
@@ -70,65 +70,56 @@ local function extractPlayerNames(contentFrame, callback)
 
   local playerNames = {}
   local foundNames = {}
+  local ignoreTexts = {
+    ["Name"] = true,
+    ["Deaths"] = true,
+    ["All"] = true,
+    ["Progress"] = true
+  }
 
-  local function searchFrameHierarchy(frame)
-    if not frame then
-      return
-    end
-
-    if frame.text and type(frame.text) == "table" and frame.text.GetText then
-      local text = frame.text:GetText()
-      
-      if text and not text:match("%d") and text ~= "Name" and text ~= "Deaths" then
-        local isPlayerName = text:match("^[%a]+%-?[%a]*$")
-        
-        if isPlayerName and text ~= "" and not foundNames[text] then
-          foundNames[text] = true
-          table.insert(playerNames, text)
-        end
-      end
-    end
-
-    local children = {frame:GetChildren()}
-    for _, child in ipairs(children) do
-      searchFrameHierarchy(child)
-    end
+  -- Get ScrollBox.ScrollTarget path
+  local scrollBox = contentFrame.scrollBox or contentFrame.ScrollBox
+  if not scrollBox then
+    print("No scrollBox found")
+    callback({})
+    return
   end
 
-  -- Scroll through content to render all entries
-  if contentFrame.scrollBox then
-    local scrollBox = contentFrame.scrollBox
-    
-    pcall(function()
-      if scrollBox.ScrollToBegin then
-        scrollBox:ScrollToBegin()
-      end
-    end)
-    
-    C_Timer.After(0.1, function()
-      pcall(function()
-        if scrollBox.ScrollToEnd then
-          scrollBox:ScrollToEnd()
-        end
-      end)
-      
-      C_Timer.After(0.1, function()
-        pcall(function()
-          if scrollBox.ScrollToBegin then
-            scrollBox:ScrollToBegin()
+  local scrollTarget = scrollBox.ScrollTarget
+  if not scrollTarget then
+    print("No ScrollTarget found")
+    callback({})
+    return
+  end
+
+  -- Search children of ScrollTarget
+  local children = {scrollTarget:GetChildren()}
+  
+  for _, child in ipairs(children) do
+    if child then
+      local grandchildren = {child:GetChildren()}
+      for _, grandchild in ipairs(grandchildren) do
+        if grandchild and grandchild.text then
+          local textObj = grandchild.text
+          if textObj and type(textObj) == "table" and textObj.GetText then
+            local text = textObj:GetText()
+            
+            if text and text ~= "" and not ignoreTexts[text] and not foundNames[text] then
+              -- Reject text that contains any numbers
+              local hasNumber = text:match("%d")
+              
+              if not hasNumber then
+                foundNames[text] = true
+                table.insert(playerNames, text)
+              end
+            end
           end
-        end)
-        
-        C_Timer.After(0.1, function()
-          searchFrameHierarchy(contentFrame)
-          callback(playerNames)
-        end)
-      end)
-    end)
-  else
-    searchFrameHierarchy(contentFrame)
-    callback(playerNames)
+        end
+      end
+    end
   end
+
+  callback(playerNames)
 end
 
 -- Create player names button
@@ -137,29 +128,28 @@ local function createPlayerNamesButton(parentFrame)
     return
   end
 
-  local button = CreateFrame("Button", nil, parentFrame, "UIPanelButtonTemplate")
+  local contentFrame = parentFrame.Content or parentFrame.content
+  if not contentFrame then
+    return
+  end
+
+  local button = CreateFrame("Button", nil, contentFrame, "UIPanelButtonTemplate")
   button:SetSize(120, 25)
   button:SetText("Player Names")
-  
-  if parentFrame.leaveButton then
-    button:SetPoint("LEFT", parentFrame.leaveButton, "RIGHT", 5, 0)
-  else
-    button:SetPoint("BOTTOMLEFT", parentFrame, "BOTTOMLEFT", 10, 10)
-  end
+  button:SetPoint("BOTTOMRIGHT", contentFrame, "BOTTOMRIGHT", -10, 10)
   
   button:SetScript("OnClick", function()
     if InCombatLockdown() then
       return
     end
 
-    local contentFrame = parentFrame.Content or parentFrame.content
-    if contentFrame then
+    C_Timer.After(0.2, function()
       extractPlayerNames(contentFrame, function(playerNames)
         if #playerNames > 0 then
           showPlayerNamesDialog(playerNames)
         end
       end)
-    end
+    end)
   end)
 
   parentFrame.bentoNamesButton = button
