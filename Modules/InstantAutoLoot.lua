@@ -1,84 +1,46 @@
--- Enables instant auto looting with rapid ticker-based looting
+-- Instant auto loot with stability delay and empty window close
 
-local lootTicker = nil
-local isLooting = false
-local lastNumLoot = nil
-
--- Set loot rate to instant
+local lastLootTimestamp = 0
+local lootStabilityDelay = 0.025
 
 local function setInstantLootRate()
     SetCVar("autoLootRate", 0)
 end
 
--- Enable auto loot by default
-
-local function enableAutoLoot()
+local function enableAutoLootDefault()
     SetCVar("autoLootDefault", 1)
 end
 
--- Cancel active loot ticker
-
-local function cancelLootTicker()
-    if lootTicker then
-        lootTicker:Cancel()
-        lootTicker = nil
+local function lootAllItemSlots()
+    if GetCVarBool("autoLootDefault") ~= IsModifiedClick("AUTOLOOTTOGGLE") then
+        if (GetTime() - lastLootTimestamp) >= lootStabilityDelay then
+            for slot = GetNumLootItems(), 1, -1 do
+                LootSlot(slot)
+            end
+            lastLootTimestamp = GetTime()
+        end
     end
 end
 
--- Start rapid looting using ticker
-
-local function startRapidLooting(numItems)
-    cancelLootTicker()
-    local currentSlot = numItems
+local function processLootWindow()
+    local lootItemCount = GetNumLootItems()
     
-    lootTicker = C_Timer.NewTicker(0.033, function()
-        if currentSlot >= 1 then
-            LootSlot(currentSlot)
-            currentSlot = currentSlot - 1
-        else
-            cancelLootTicker()
-        end
-    end, numItems + 1)
-end
-
--- Handle loot ready event
-
-local function onLootReady(autoLoot)
-    isLooting = true
-    
-    local numItems = GetNumLootItems()
-    if numItems == 0 or lastNumLoot == numItems then
+    if lootItemCount == 0 then
+        CloseLoot()
         return
     end
     
-    local shouldAutoLoot = autoLoot or (GetCVarBool("autoLootDefault") and not IsModifiedClick("AUTOLOOTTOGGLE"))
-    
-    if shouldAutoLoot then
-        startRapidLooting(numItems)
-    end
-    
-    lastNumLoot = numItems
+    lootAllItemSlots()
 end
 
--- Handle loot closed event
-
-local function onLootClosed()
-    isLooting = false
-    lastNumLoot = nil
-    cancelLootTicker()
-end
-
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("LOOT_READY")
-frame:RegisterEvent("LOOT_CLOSED")
-frame:SetScript("OnEvent", function(self, event, ...)
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+eventFrame:RegisterEvent("LOOT_READY")
+eventFrame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_ENTERING_WORLD" then
-        enableAutoLoot()
+        enableAutoLootDefault()
         setInstantLootRate()
     elseif event == "LOOT_READY" then
-        onLootReady(...)
-    elseif event == "LOOT_CLOSED" then
-        onLootClosed()
+        processLootWindow()
     end
 end)
