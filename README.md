@@ -14,3 +14,4 @@ Quality of life utilities and automation features for World of Warcraft that str
 - **Reload Button** - Right-click main menu button to reload UI
 - **Scoreboard Name Copy** - Adds "Player Names" button to PVP scoreboard for copying all player names
 - **Sell & Repair** - Auto-sells junk and repairs when visiting merchants
+- **Whisper Raid Leader** - Use `/wl` command to quickly whisper the current raid leader
