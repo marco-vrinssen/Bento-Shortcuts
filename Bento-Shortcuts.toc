@@ -9,7 +9,7 @@
 Modules/AuctionExpacFilter.lua
 Modules/AuctionFavoriteSync.lua
 Modules/AutoGhost.lua
-Modules/CommandOverview.lua
+Modules/DefaultMacroIcon.lua
 Modules/FullNameCopy.lua
 Modules/InstantAutoLoot.lua
 Modules/InviteWhisper.lua
