@@ -16,3 +16,4 @@ Modules/PostItem.lua
 Modules/ReloadButton.lua
 Modules/ScoreboardNameCopy.lua
 Modules/SellRepair.lua
+Modules/WhisperRaidLead.lua
