@@ -1,8 +1,9 @@
 -- Syncs auction house favorites across all characters on the account
 
-local accountDB
-local characterDB
+local accountFavorites
+local characterFavorites
 
+-- Creates a unique hash from item key properties for storage and comparison
 local function createItemKeyHash(itemKey)
 	local keys, values = {}, {}
 	for k in pairs(itemKey) do table.insert(keys, k) end
@@ -11,24 +12,27 @@ local function createItemKeyHash(itemKey)
 	return table.concat(values, "-")
 end
 
+-- Syncs item favorite status between account and character databases
 local function syncFavorite(itemKey)
-	local itemHash = createItemKeyHash(itemKey)
+	local itemKeyHash = createItemKeyHash(itemKey)
 
-	if not accountDB.favorites[itemHash] == not characterDB.favorites[itemHash] then
+	if not accountFavorites.favorites[itemKeyHash] == not characterFavorites.favorites[itemKeyHash] then
 		return false
 	end
 
-	C_AuctionHouse.SetFavoriteItem(itemKey, accountDB.favorites[itemHash] ~= nil)
+	C_AuctionHouse.SetFavoriteItem(itemKey, accountFavorites.favorites[itemKeyHash] ~= nil)
 	return true
 end
 
+-- Saves item favorite status to both account and character databases
 local function saveFavorite(itemKey, isFavorited)
-	local itemHash = createItemKeyHash(itemKey)
+	local itemKeyHash = createItemKeyHash(itemKey)
 
-	accountDB.favorites[itemHash] = isFavorited and itemKey or nil
-	characterDB.favorites[itemHash] = isFavorited and itemKey or nil
+	accountFavorites.favorites[itemKeyHash] = isFavorited and itemKey or nil
+	characterFavorites.favorites[itemKeyHash] = isFavorited and itemKey or nil
 end
 
+-- Hooks into auction house API to intercept favorite changes
 hooksecurefunc(C_AuctionHouse, "SetFavoriteItem", saveFavorite)
 
 local eventFrame = CreateFrame("Frame")
@@ -38,18 +42,20 @@ eventFrame:RegisterEvent("AUCTION_HOUSE_SHOW")
 eventFrame:RegisterEvent("AUCTION_HOUSE_CLOSED")
 
 eventFrame:SetScript("OnEvent", function(_, event, ...)
+	-- Initialize databases when addon loads
 	if event == "ADDON_LOADED" and ... == "Bento-Shortcuts" then
 		eventFrame:UnregisterEvent("ADDON_LOADED")
 
 		BentoAuctionFavoritesDB = BentoAuctionFavoritesDB or {}
-		accountDB = BentoAuctionFavoritesDB
-		accountDB.favorites = accountDB.favorites or {}
+		accountFavorites = BentoAuctionFavoritesDB
+		accountFavorites.favorites = accountFavorites.favorites or {}
 
 		BentoAuctionFavoritesCharDB = BentoAuctionFavoritesCharDB or {}
-		characterDB = BentoAuctionFavoritesCharDB
-		characterDB.favorites = characterDB.favorites or {}
+		characterFavorites = BentoAuctionFavoritesCharDB
+		characterFavorites.favorites = characterFavorites.favorites or {}
 
-		if not characterDB.synced then
+		-- Register search result events for first-time sync on this character
+		if not characterFavorites.synced then
 			eventFrame:RegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED")
 			eventFrame:RegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_ADDED")
 			eventFrame:RegisterEvent("COMMODITY_SEARCH_RESULTS_UPDATED")
@@ -59,32 +65,35 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
 		end
 	end
 
+	-- Sync favorites when auction house opens
 	if event == "AUCTION_HOUSE_SHOW" then
-		local needRefresh = false
+		local shouldRefreshSearch = false
 
-		if characterDB.synced then
-			for _, favorites in ipairs { accountDB.favorites, characterDB.favorites } do
+		if characterFavorites.synced then
+			for _, favorites in ipairs { accountFavorites.favorites, characterFavorites.favorites } do
 				for _, itemKey in pairs(favorites) do
-					needRefresh = syncFavorite(itemKey) or needRefresh
+					shouldRefreshSearch = syncFavorite(itemKey) or shouldRefreshSearch
 				end
 			end
 		else
-			for _, itemKey in pairs(accountDB.favorites) do
+			for _, itemKey in pairs(accountFavorites.favorites) do
 				C_AuctionHouse.SetFavoriteItem(itemKey, true)
-				needRefresh = true
+				shouldRefreshSearch = true
 			end
 		end
 
-		if needRefresh then
+		if shouldRefreshSearch then
 			C_AuctionHouse.SearchForFavorites({})
 		end
 	end
 
+	-- Mark character as synced and cleanup when auction house closes
 	if event == "AUCTION_HOUSE_CLOSED" then
-		characterDB.synced = true
+		characterFavorites.synced = true
 		eventFrame:UnregisterAllEvents()
 	end
 
+	-- Processes search results and saves favorite status for discovered items
 	local function processItemKey(itemKey)
 		saveFavorite(itemKey, C_AuctionHouse.IsFavoriteItem(itemKey))
 	end
